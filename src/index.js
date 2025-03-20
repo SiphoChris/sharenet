@@ -1,193 +1,143 @@
-import { Hono } from 'hono';
-import { PrismaClient } from '@prisma/client';
+import express from "express";
+import cors from "cors";
+import crypto from "crypto";
+import { PrismaClient } from "@prisma/client";
 
-// Initialize Prisma client
+const app = express();
 const prisma = new PrismaClient();
-const app = new Hono();
 
-// GET endpoint to fetch available sessions
-app.get('/sessions', async (c) => {
-  try {
-    const currentDate = new Date();
-    
-    // Get all future sessions
-    const sessions = await prisma.session.findMany({
-      where: {
-        date: {
-          gte: currentDate
-        }
-      },
-      orderBy: {
-        date: 'asc'
-      },
-      include: {
-        _count: {
-          select: { bookings: true }
-        }
-      }
-    });
-    
-    // Calculate availability for each session
-    const sessionsWithAvailability = sessions.map(session => {
-      const bookedSpots = session._count.bookings;
-      const availableSpots = session.capacity - bookedSpots;
-      const isSoldOut = availableSpots <= 0;
-      
-      // Remove _count from response and add availability info
-      const { _count, ...sessionData } = session;
-      
-      return {
-        ...sessionData,
-        bookedSpots,
-        availableSpots,
-        isSoldOut
-      };
-    });
-    
-    return c.json({
-      success: true,
-      data: sessionsWithAvailability
-    });
-  } catch (error) {
-    console.error('Error fetching sessions:', error);
-    return c.json({
-      success: false,
-      message: 'Failed to fetch sessions',
-      error: error.message
-    }, 500);
-  }
-});
+app.use(cors());
+app.use(express.json());
 
-// POST endpoint to create a new booking
-app.post('/bookings', async (c) => {
+// Generate a unique reference code
+const generateReferenceCode = () =>
+  crypto.randomBytes(6).toString("hex").toUpperCase();
+
+// Create Booking
+app.post("/bookings", async (req, res) => {
+  const { name, date, totalSeats } = req.body;
+
   try {
-    const body = await c.req.json();
-    const { sessionId, name, email, phone } = body;
-    
-    // Validate required fields
-    if (!sessionId || !name || !email) {
-      return c.json({
-        success: false,
-        message: 'Missing required fields: sessionId, name, and email are required'
-      }, 400);
-    }
-    
-    // Check if session exists and has availability
-    const session = await prisma.session.findUnique({
-      where: { id: sessionId },
-      include: {
-        _count: {
-          select: { bookings: true }
-        }
-      }
-    });
-    
-    if (!session) {
-      return c.json({
-        success: false,
-        message: 'Session not found'
-      }, 404);
-    }
-    
-    // Check if session is already sold out
-    if (session._count.bookings >= session.capacity) {
-      return c.json({
-        success: false,
-        message: 'Session is sold out'
-      }, 400);
-    }
-    
-    // Check if user already has a booking for this session
-    const existingBooking = await prisma.booking.findFirst({
-      where: {
-        sessionId,
-        email
-      }
-    });
-    
-    if (existingBooking) {
-      return c.json({
-        success: false,
-        message: 'You have already booked this session'
-      }, 400);
-    }
-    
-    // Create the booking
-    const booking = await prisma.booking.create({
+    // Generate a reference code for the user
+    const referenceCode = generateReferenceCode();
+
+    const newBooking = await prisma.booking.create({
       data: {
-        sessionId,
         name,
-        email,
-        phone
-      }
-    });
-    
-    return c.json({
-      success: true,
-      message: 'Booking confirmed',
-      data: booking
-    }, 201);
-  } catch (error) {
-    console.error('Error creating booking:', error);
-    return c.json({
-      success: false,
-      message: 'Failed to create booking',
-      error: error.message
-    }, 500);
-  }
-});
-
-// POST endpoint to create a new session (admin functionality)
-app.post('/sessions', async (c) => {
-  try {
-    const body = await c.req.json();
-    const { title, description, date, startTime, endTime, capacity, location } = body;
-    
-    // Validate required fields
-    if (!title || !date || !startTime || !endTime || !capacity) {
-      return c.json({
-        success: false,
-        message: 'Missing required fields: title, date, startTime, endTime, and capacity are required'
-      }, 400);
-    }
-    
-    // Create the session
-    const session = await prisma.session.create({
-      data: {
-        title,
-        description,
         date: new Date(date),
-        startTime: new Date(startTime),
-        endTime: new Date(endTime),
-        capacity: parseInt(capacity),
-        location
-      }
+        status: "available",
+        reference: referenceCode,
+        totalSeats: totalSeats || 100,
+        availableSeats: totalSeats || 100,
+      },
     });
-    
-    return c.json({
-      success: true,
-      message: 'Session created',
-      data: session
-    }, 201);
+
+    // Return booking details including the reference code
+    res.status(201).json({
+      message: "Booking successful",
+      booking: newBooking,
+      referenceCode,
+    });
   } catch (error) {
-    console.error('Error creating session:', error);
-    return c.json({
-      success: false,
-      message: 'Failed to create session',
-      error: error.message
-    }, 500);
+    console.error("Error creating booking:", error);
+    res.status(500).json({ error: "Could not create booking" });
   }
 });
 
-// Keep your existing routes for testing
-app.get('/', async (c) => {
+// Get All Bookings
+app.get("/bookings", async (req, res) => {
   try {
-    const result = await prisma.$queryRaw`SELECT version()`;
-    return c.text(`Hello, World! Database connected. PostgreSQL version: ${result[0].version}`);
+    const bookings = await prisma.booking.findMany();
+    res.json(bookings);
   } catch (error) {
-    console.error('Database connection error:', error);
-    return c.text('Error connecting to database', 500);
+    res.status(500).json({ error: "Could not fetch bookings" });
   }
 });
 
-export default app;
+// Get a Single Booking by Reference Code
+app.get("/bookings/reference/:code", async (req, res) => {
+  const { code } = req.params;
+  try {
+    const booking = await prisma.booking.findUnique({
+      where: { reference: code },
+    });
+
+    if (!booking) return res.status(404).json({ error: "Booking not found" });
+
+    res.json(booking);
+  } catch (error) {
+    res.status(500).json({ error: "Could not fetch booking" });
+  }
+});
+
+// Update Booking Status
+app.patch("/bookings/:id", async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  if (!["available", "sold out"].includes(status)) {
+    return res.status(400).json({ error: "Invalid status" });
+  }
+
+  try {
+    const updatedBooking = await prisma.booking.update({
+      where: { id: Number(id) },
+      data: { status },
+    });
+
+    res.json(updatedBooking);
+  } catch (error) {
+    console.error("Error updating booking:", error);
+    res.status(500).json({ error: "Could not update booking" });
+  }
+});
+
+// Book a seat for an event
+app.post("/bookings/:id/book", async (req, res) => {
+    const { id } = req.params;
+    const { email } = req.body;
+  
+    if (!email) {
+      return res.status(400).json({ error: "Email is required" });
+    }
+  
+    try {
+      // Get the current booking
+      const booking = await prisma.booking.findUnique({
+        where: { id: Number(id) },
+      });
+  
+      if (!booking) {
+        return res.status(404).json({ error: "Booking not found" });
+      }
+  
+      if (booking.status === "sold out" || booking.availableSeats <= 0) {
+        return res.status(400).json({ error: "No seats available" });
+      }
+  
+      // Update the booking
+      const updatedBooking = await prisma.booking.update({
+        where: { id: Number(id) },
+        data: {
+          availableSeats: booking.availableSeats - 1,
+          userEmail: email,
+          // If this was the last seat, mark as sold out
+          status: booking.availableSeats <= 1 ? "sold out" : "available",
+        },
+      });
+  
+      // Return the updated booking with reference code
+      res.json({
+        message: "Seat booked successfully",
+        booking: updatedBooking,
+        reference: updatedBooking.reference, // Corrected line
+      });
+    } catch (error) {
+      console.error("Error booking seat:", error);
+      res.status(500).json({ error: "Could not book seat" });
+    }
+  });
+
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

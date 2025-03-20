@@ -1,24 +1,27 @@
 {
   "name": "server",
+  "version": "1.0.0",
   "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "wrangler pages dev",
-    "deploy": "npm run build && wrangler pages deploy"
+  "main": "src/index.js",
+  "prisma": {
+    "seed": "node prisma/seed.js"
   },
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js"
+  },
+  "author": "Sipho Nkebe",
+  "license": "ISC",
+  "description": "",
   "dependencies": {
-    "@neondatabase/serverless": "^0.10.4",
     "@prisma/client": "^6.5.0",
+    "body-parser": "^1.20.3",
+    "cors": "^2.8.5",
     "dotenv": "^16.4.7",
-    "hono": "^4.7.4",
-    "prisma": "^6.5.0"
+    "express": "^4.21.2",
+    "nodemon": "^3.1.9"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20250214.0",
-    "@hono/vite-build": "^1.2.0",
-    "@hono/vite-dev-server": "^0.18.2",
-    "vite": "^6.1.1",
-    "wrangler": "^3.109.2"
+    "prisma": "^6.5.0"
   }
 }

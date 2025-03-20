@@ -1,7 +1,8 @@
-import dotenv from "dotenv";
+import { config } from "dotenv";
 
-dotenv.config();
+config();
 
-const { PGHOST, PGDATABASE, PGUSER, PGPASSWORD, ENDPOINT_ID } = process.env;
-
-export { PGHOST, PGDATABASE, PGUSER, PGPASSWORD, ENDPOINT_ID };
+export default {
+    PORT: process.env.PORT || 3000,
+    DB_URL: process.env.DATABASE_URL,
+}

@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE `Booking` ADD COLUMN `availableSeats` INTEGER NOT NULL DEFAULT 100,
+    ADD COLUMN `totalSeats` INTEGER NOT NULL DEFAULT 100,
+    ADD COLUMN `userEmail` VARCHAR(191) NULL;
