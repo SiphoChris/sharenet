@@ -7,12 +7,12 @@ import {
   bookSeat,
 } from '../controllers/booking.controller.js';
 
-const router = express.Router();
+const bookingRouter = express.Router();
 
-router.post('/', createBooking);
-router.get('/', getAllBookings);
-router.get('/reference/:code', getBookingByReference);
-router.patch('/:id', updateBookingStatus);
-router.post('/:id/book', bookSeat);
+bookingRouter.post('/', createBooking);
+bookingRouter.get('/', getAllBookings);
+bookingRouter.get('/reference/:code', getBookingByReference);
+bookingRouter.patch('/:id', updateBookingStatus);
+bookingRouter.post('/:id/book', bookSeat);
 
-export default router;
+export default bookingRouter
