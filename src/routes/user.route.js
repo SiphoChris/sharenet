@@ -1,10 +1,14 @@
 import express from "express";
-import { registerUser, loginUser, deleteUser } from "../controllers/user.controller.js";
-import {
-  addToWatchlist,
-  clearWatchlist,
-  getWatchlistsByUserId,
-  removeOneFromWatchlist,
+import { 
+  registerUser, 
+  loginUser,
+  deleteUser 
+} from "../controllers/user.controller.js";
+import { 
+  addToWatchlist, 
+  clearWatchlist, 
+  getWatchlistsByUserId, 
+  removeOneFromWatchlist 
 } from "../controllers/watchlist.controller.js";
 import { verifyToken } from "../middleware/auth.js";
 
@@ -21,9 +25,9 @@ router.use(verifyToken);
 router.delete("/:user_id", deleteUser);
 
 // Watchlist routes
-router.get("/:user_id/watchlist", getWatchlistsByUserId);
+router.get("/watchlist", getWatchlistsByUserId); 
 router.post("/watchlist", addToWatchlist);
-router.delete("/watchlist/:share_code", removeOneFromWatchlist);
-router.delete("/watchlist", clearWatchlist);
+router.delete("/watchlist/clearall", clearWatchlist); 
+router.delete("/watchlist/item/:watchlist_id", removeOneFromWatchlist); 
 
 export {router as userRouter};

@@ -138,7 +138,7 @@ export const deleteUser = async (req, res) => {
   const requestingUser = req.user;
 
   // a user can only delete their own account
-  if (requestingUser.user_id !== parseInt(user_id) && requestingUser.role !== "admin") {
+  if (requestingUser.user_id !== parseInt(user_id)) {
     return res.status(403).json({ 
       success: false,
       error: "Unauthorized" 

@@ -1,21 +1,13 @@
 import { db } from "../../config/index.js";
 
+// Get current user's watchlist
 export const getWatchlistsByUserId = async (req, res) => {
-  const { user_id } = req.params;
-
-  if (!user_id || isNaN(user_id)) {
-    return res.status(400).json({ 
-      success: false,
-      error: "Valid user ID is required" 
-    });
-  }
-
+  const { user_id } = req.user;
   try {
     const [watchlists] = await db.query(
-      `SELECT w.watchlist_id, w.share_code 
-       FROM watchlist w
-       JOIN users u ON w.user_id = u.user_id
-       WHERE w.user_id = ?`,
+      `SELECT watchlist_id, share_code 
+       FROM watchlist 
+       WHERE user_id = ?`,
       [user_id]
     );
 
@@ -34,11 +26,10 @@ export const getWatchlistsByUserId = async (req, res) => {
   }
 };
 
-
-// Add to watchlist for authenticated user
+// Add to current user's watchlist
 export const addToWatchlist = async (req, res) => {
   const { share_code } = req.body;
-  const { user_id } = req.user; 
+  const { user_id } = req.user;
 
   if (!share_code) {
     return res.status(400).json({ 
@@ -48,7 +39,7 @@ export const addToWatchlist = async (req, res) => {
   }
 
   try {
-    // Checking if item already exists in user's watchlist
+    // Check if already exists in user's watchlist
     const [existing] = await db.query(
       "SELECT watchlist_id FROM watchlist WHERE user_id = ? AND share_code = ?",
       [user_id, share_code]
@@ -57,7 +48,7 @@ export const addToWatchlist = async (req, res) => {
     if (existing.length > 0) {
       return res.status(409).json({
         success: false,
-        error: "Item already exists in your watchlist"
+        error: "Item already in watchlist"
       });
     }
 
@@ -71,7 +62,6 @@ export const addToWatchlist = async (req, res) => {
       message: "Item added to watchlist successfully",
       data: {
         watchlist_id: result.insertId,
-        user_id,
         share_code
       }
     });
@@ -85,30 +75,22 @@ export const addToWatchlist = async (req, res) => {
   }
 };
 
-
-
-// a user can remove an item from their watchlist
+// Remove from current user's watchlist
 export const removeOneFromWatchlist = async (req, res) => {
-  const { share_code } = req.params;
-  const { user_id } = req.user; 
-
-  if (!share_code) {
-    return res.status(400).json({ 
-      success: false,
-      error: "Share code is required" 
-    });
-  }
+  const { watchlist_id } = req.params;
+  const { user_id } = req.user;
+  console.log(watchlist_id);
 
   try {
     const [result] = await db.query(
-      "DELETE FROM watchlist WHERE user_id = ? AND share_code = ?",
-      [user_id, share_code]
+      "DELETE FROM watchlist WHERE user_id = ? AND watchlist_id = ?",
+      [user_id, watchlist_id]
     );
 
     if (result.affectedRows === 0) {
       return res.status(404).json({
         success: false,
-        error: "Item not found in your watchlist"
+        error: "Item not found in watchlist"
       });
     }
 
@@ -126,10 +108,9 @@ export const removeOneFromWatchlist = async (req, res) => {
   }
 };
 
-
-// a user can only clear their watchlist
+// Clear current user's watchlist
 export const clearWatchlist = async (req, res) => {
-  const { user_id } = req.user; 
+  const { user_id } = req.user;
 
   try {
     const [result] = await db.query(
@@ -148,6 +129,6 @@ export const clearWatchlist = async (req, res) => {
       success: false,
       error: "Failed to clear watchlist",
       details: process.env.NODE_ENV === "development" ? error.message : undefined,
-    });
+    }); 
   }
 };
