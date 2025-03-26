@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import bookingsRoutes from './routes/booking.route.js';
-import userRouter from './routes/user.route.js';
+import { userRouter } from './routes/user.route.js';
 
 const app = express();
 
