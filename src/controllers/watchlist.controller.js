@@ -79,7 +79,6 @@ export const addToWatchlist = async (req, res) => {
 export const removeOneFromWatchlist = async (req, res) => {
   const { watchlist_id } = req.params;
   const { user_id } = req.user;
-  console.log(watchlist_id);
 
   try {
     const [result] = await db.query(
