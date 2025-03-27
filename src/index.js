@@ -10,7 +10,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use('/bookings', bookingsRoutes);
-app.use('/users', userRouter);
+app.use('/user', userRouter);
 
 const PORT = process.env.PORT || 3000;
 
